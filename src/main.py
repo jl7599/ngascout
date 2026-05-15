@@ -19,25 +19,31 @@ def process_thread(config: Config, item: WatchItem) -> None:
 
     uids = item.uids or [latest_resp.thread_info.authorid]
 
+    # Load stored data for each user and determine page range
+    stored_map: dict[int, StoreData | None] = {}
     earliest_page = latest_resp.current_page
     for uid in uids:
         stored = load(item.tid, uid)
+        stored_map[uid] = stored
         if stored is not None:
             sp = page_for_lou(stored.last_page)
             earliest_page = min(earliest_page, sp)
 
+    # Fetch intermediate pages only if at least one user has history
+    need_intermediate = any(v is not None for v in stored_map.values())
     all_replies: list[NgaReply] = []
-    for p in range(earliest_page, latest_resp.current_page):
-        try:
-            r = fetch_thread(item.tid, p, config.nga_cookie)
-            all_replies.extend(r.replies)
-        except Exception as e:
-            logger.error("Failed to fetch tid=%d page=%d: %s", item.tid, p, e)
+    if need_intermediate:
+        for p in range(earliest_page, latest_resp.current_page):
+            try:
+                r = fetch_thread(item.tid, p, config.nga_cookie)
+                all_replies.extend(r.replies)
+            except Exception as e:
+                logger.error("Failed to fetch tid=%d page=%d: %s", item.tid, p, e)
     all_replies.extend(latest_resp.replies)
     all_replies.sort(key=lambda x: x.lou)
 
     for uid in uids:
-        stored = load(item.tid, uid)
+        stored = stored_map[uid]
         user_replies = [r for r in all_replies if r.authorid == uid]
 
         if stored is None:

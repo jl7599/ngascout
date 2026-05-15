@@ -6,7 +6,9 @@
       "Bash(uv python *)",
       "Bash(uv run *)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(docker compose build *)",
+      "Bash(docker pull *)"
     ]
   }
 }

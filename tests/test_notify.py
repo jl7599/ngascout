@@ -60,9 +60,19 @@ class TestSendWebhook:
     def test_success(self):
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {"code": 0}
         with patch("src.notify.httpx.post", return_value=mock_resp):
             assert (
                 send_webhook("https://example.com/hook", {"msg_type": "text"}) is True
+            )
+
+    def test_feishu_api_error(self):
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {"code": 19021, "msg": "rate limited"}
+        with patch("src.notify.httpx.post", return_value=mock_resp):
+            assert (
+                send_webhook("https://example.com/hook", {"msg_type": "text"}) is False
             )
 
     def test_failure_returns_false(self):

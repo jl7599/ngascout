@@ -28,6 +28,14 @@ def send_webhook(url: str, message: dict) -> bool:
     try:
         resp = httpx.post(url, json=message, timeout=10)
         resp.raise_for_status()
+        data = resp.json()
+        if data.get("code", 0) != 0:
+            logger.error(
+                "Feishu webhook error: code=%s msg=%s",
+                data.get("code"),
+                data.get("msg"),
+            )
+            return False
         return True
     except httpx.HTTPError as e:
         logger.error("Feishu webhook failed: %s", e)

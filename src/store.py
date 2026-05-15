@@ -19,7 +19,7 @@ class StoreData:
     posts: dict[str, PostRecord] = field(default_factory=dict)
 
 
-DATA_DIR = Path("data")
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 
 
 def _path(tid: int, uid: int) -> Path:
