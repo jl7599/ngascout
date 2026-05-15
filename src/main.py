@@ -40,6 +40,26 @@ def process_thread(config: Config, item: WatchItem) -> None:
             except Exception as e:
                 logger.error("Failed to fetch tid=%d page=%d: %s", item.tid, p, e)
     all_replies.extend(latest_resp.replies)
+
+    # First-run: search backwards for uids not found on the latest page
+    first_run_uids = {uid for uid in uids if stored_map[uid] is None}
+    found_on_latest = {r.authorid for r in latest_resp.replies} & first_run_uids
+    missing_uids = first_run_uids - found_on_latest
+    MAX_BACKWARD_PAGES = 10
+    if missing_uids:
+        floor = max(latest_resp.current_page - MAX_BACKWARD_PAGES, 1)
+        for p in range(latest_resp.current_page - 1, floor - 1, -1):
+            if not missing_uids:
+                break
+            try:
+                r = fetch_thread(item.tid, p, config.nga_cookie)
+                found_here = {reply.authorid for reply in r.replies} & missing_uids
+                if found_here:
+                    all_replies.extend(r.replies)
+                    missing_uids -= found_here
+            except Exception as e:
+                logger.error("Failed to fetch tid=%d page=%d: %s", item.tid, p, e)
+
     all_replies.sort(key=lambda x: x.lou)
 
     for uid in uids:
@@ -47,7 +67,7 @@ def process_thread(config: Config, item: WatchItem) -> None:
         user_replies = [r for r in all_replies if r.authorid == uid]
 
         if stored is None:
-            new_replies = [r for r in latest_resp.replies if r.authorid == uid]
+            new_replies = user_replies
         else:
             new_replies = [r for r in user_replies if str(r.pid) not in stored.posts]
 

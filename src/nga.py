@@ -74,11 +74,15 @@ def fetch_thread(tid: int, page: int | str, cookie: str) -> NgaResponse:
 
     users = {}
     for uid_str, u in data.get("__U", {}).items():
+        if not uid_str.isdigit():
+            continue
         uid = int(uid_str)
         users[uid] = NgaUser(uid=uid, username=u["username"])
 
     replies = []
     for rid, r in data.get("__R", {}).items():
+        if not rid.isdigit():
+            continue
         replies.append(
             NgaReply(
                 pid=r["pid"],
