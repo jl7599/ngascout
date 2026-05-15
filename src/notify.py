@@ -14,9 +14,7 @@ def strip_html(text: str) -> str:
     return text.strip()
 
 
-def format_message(
-    thread_subject: str, username: str, replies: list
-) -> dict:
+def format_message(thread_subject: str, username: str, replies: list) -> dict:
     parts = []
     for r in replies:
         content = strip_html(r.content)

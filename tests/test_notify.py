@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import httpx
-import pytest
 
 from src.notify import format_message, send_webhook, strip_html
 
@@ -62,7 +61,9 @@ class TestSendWebhook:
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
         with patch("src.notify.httpx.post", return_value=mock_resp):
-            assert send_webhook("https://example.com/hook", {"msg_type": "text"}) is True
+            assert (
+                send_webhook("https://example.com/hook", {"msg_type": "text"}) is True
+            )
 
     def test_failure_returns_false(self):
         with patch(
@@ -71,4 +72,6 @@ class TestSendWebhook:
                 "err", request=MagicMock(), response=MagicMock(status_code=500)
             ),
         ):
-            assert send_webhook("https://example.com/hook", {"msg_type": "text"}) is False
+            assert (
+                send_webhook("https://example.com/hook", {"msg_type": "text"}) is False
+            )
