@@ -1,0 +1,93 @@
+from __future__ import annotations
+
+import logging
+
+from src.config import Config, WatchItem
+from src.nga import NgaReply, fetch_thread, page_for_lou
+from src.notify import format_message, send_webhook
+from src.store import PostRecord, StoreData, load, save
+
+logger = logging.getLogger(__name__)
+
+
+def process_thread(config: Config, item: WatchItem) -> None:
+    try:
+        latest_resp = fetch_thread(item.tid, "e", config.nga_cookie)
+    except Exception as e:
+        logger.error("Failed to fetch tid=%d: %s", item.tid, e)
+        return
+
+    uids = item.uids or [latest_resp.thread_info.authorid]
+
+    earliest_page = latest_resp.current_page
+    for uid in uids:
+        stored = load(item.tid, uid)
+        if stored is not None:
+            sp = page_for_lou(stored.last_page)
+            earliest_page = min(earliest_page, sp)
+
+    all_replies: list[NgaReply] = []
+    for p in range(earliest_page, latest_resp.current_page):
+        try:
+            r = fetch_thread(item.tid, p, config.nga_cookie)
+            all_replies.extend(r.replies)
+        except Exception as e:
+            logger.error("Failed to fetch tid=%d page=%d: %s", item.tid, p, e)
+    all_replies.extend(latest_resp.replies)
+    all_replies.sort(key=lambda x: x.lou)
+
+    for uid in uids:
+        stored = load(item.tid, uid)
+        user_replies = [r for r in all_replies if r.authorid == uid]
+
+        if stored is None:
+            new_replies = [r for r in latest_resp.replies if r.authorid == uid]
+        else:
+            new_replies = [r for r in user_replies if str(r.pid) not in stored.posts]
+
+        if not new_replies:
+            continue
+
+        username_obj = latest_resp.users.get(uid)
+        username_str = username_obj.username if username_obj else str(uid)
+
+        msg = format_message(latest_resp.thread_info.subject, username_str, new_replies)
+        success = send_webhook(config.feishu_webhook_url, msg)
+
+        if success:
+            if stored is None:
+                stored = StoreData(last_page=0, username=username_str, posts={})
+            for r in new_replies:
+                stored.posts[str(r.pid)] = PostRecord(
+                    content=r.content, postdate=r.postdate, lou=r.lou
+                )
+            stored.last_page = max(stored.last_page, max(r.lou for r in new_replies))
+            stored.username = username_str
+            save(item.tid, uid, stored)
+            logger.info(
+                "Sent %d new replies for tid=%d uid=%d",
+                len(new_replies),
+                item.tid,
+                uid,
+            )
+        else:
+            logger.warning(
+                "Feishu send failed, will retry next run: tid=%d uid=%d",
+                item.tid,
+                uid,
+            )
+
+
+def main() -> None:
+    from src.config import load_config
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
+    config = load_config()
+    for item in config.watch_list:
+        process_thread(config, item)
+
+
+if __name__ == "__main__":
+    main()
