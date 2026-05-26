@@ -3,10 +3,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.nga import (
+    NgaAuthorThread,
     NgaReply,
     NgaResponse,
     NgaThreadInfo,
     NgaUser,
+    fetch_author_threads_page,
     fetch_thread,
     page_for_lou,
 )
@@ -99,3 +101,46 @@ class TestFetchThread:
         ):
             with pytest.raises(httpx.HTTPStatusError):
                 fetch_thread(1, 1, "cookie")
+
+
+class TestFetchAuthorThreadsPage:
+    def test_parses_author_thread_list(self):
+        mock_json = (
+            '{"data":{"__T":{"1001":{"tid":1001,"subject":"第一篇",'
+            '"authorid":21321600,"author":"测试用户","replies":3},'
+            '"1002":{"tid":1002,"subject":"第二篇","authorid":21321600,'
+            '"author":"测试用户","replies":0}},"__ROWS":40,"__PAGE":1}}'
+        )
+        mock_resp = MagicMock()
+        mock_resp.content = ("window.script_muti_get_var_store=" + mock_json).encode(
+            "gbk"
+        )
+        mock_resp.raise_for_status = MagicMock()
+
+        with patch("src.nga.httpx.get", return_value=mock_resp) as mock_get:
+            result = fetch_author_threads_page(21321600, 1, "cookie")
+
+        assert result.current_page == 1
+        assert result.total_pages == 2
+        assert result.threads == [
+            NgaAuthorThread(
+                tid=1001,
+                subject="第一篇",
+                authorid=21321600,
+                author="测试用户",
+                replies=3,
+            ),
+            NgaAuthorThread(
+                tid=1002,
+                subject="第二篇",
+                authorid=21321600,
+                author="测试用户",
+                replies=0,
+            ),
+        ]
+        mock_get.assert_called_once()
+        assert mock_get.call_args.kwargs["params"] == {
+            "authorid": 21321600,
+            "page": 1,
+            "lite": "js",
+        }

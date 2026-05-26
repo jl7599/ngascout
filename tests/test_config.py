@@ -3,6 +3,11 @@ import pytest
 from src.config import WatchItem, load_config, parse_watch_list
 
 
+@pytest.fixture(autouse=True)
+def no_dotenv(monkeypatch):
+    monkeypatch.setattr("src.config.load_dotenv", lambda: None)
+
+
 class TestParseWatchList:
     def test_single_tid_with_users(self):
         result = parse_watch_list("45905087,557398,123456")

@@ -23,6 +23,34 @@ uv sync
 uv run python -m src.main
 ```
 
+## 归档某用户所有文章发言
+
+按用户 id 抓取该用户发表过的主题，并遍历每个主题从第一页到最后一页的所有楼层，只保留该用户自己的发言：
+
+```bash
+uv run python -m src.archive_author --authorid 21321600
+```
+
+默认输出到：
+
+```text
+data/authors/{用户id}_{用户名}/{主题id}_{文章标题}.json
+```
+
+多次执行会按 `pid` 去重；如果同一楼层内容变化，会更新 JSON 内的最新内容。
+
+默认不会发送飞书。需要推送本次新增或变更内容时，显式加 `--notify`：
+
+```bash
+uv run python -m src.archive_author --authorid 21321600 --notify
+```
+
+调试时可以限制主题数量：
+
+```bash
+uv run python -m src.archive_author --authorid 21321600 --limit-threads 5
+```
+
 ## 测试
 
 ```bash

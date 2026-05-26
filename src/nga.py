@@ -42,27 +42,50 @@ class NgaResponse:
     current_page: int
 
 
+@dataclass
+class NgaAuthorThread:
+    tid: int
+    subject: str
+    authorid: int
+    author: str
+    replies: int
+
+
+@dataclass
+class NgaAuthorThreadsPage:
+    threads: list[NgaAuthorThread]
+    total_pages: int
+    current_page: int
+
+
 def page_for_lou(lou: int) -> int:
     return lou // 20 + 1
 
 
-def fetch_thread(tid: int, page: int | str, cookie: str) -> NgaResponse:
-    url = f"{NGA_BASE_URL}/read.php"
-    params = {"tid": tid, "page": page, "lite": "js"}
-    headers = {
+def _headers(cookie: str) -> dict[str, str]:
+    return {
         "Cookie": cookie,
         "User-Agent": (
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         ),
     }
-    resp = httpx.get(url, params=params, headers=headers, timeout=30)
-    resp.raise_for_status()
 
-    raw = resp.content.decode("gbk", errors="replace")
+
+def _decode_nga_json(content: bytes) -> dict:
+    raw = content.decode("gbk", errors="replace")
     json_str = raw.replace("window.script_muti_get_var_store=", "")
     json_str = re.sub(r"[\x00-\x1f]", " ", json_str)
-    data = json.loads(json_str)["data"]
+    return json.loads(json_str)["data"]
+
+
+def fetch_thread(tid: int, page: int | str, cookie: str) -> NgaResponse:
+    url = f"{NGA_BASE_URL}/read.php"
+    params = {"tid": tid, "page": page, "lite": "js"}
+    resp = httpx.get(url, params=params, headers=_headers(cookie), timeout=30)
+    resp.raise_for_status()
+
+    data = _decode_nga_json(resp.content)
 
     t = data["__T"]
     thread_info = NgaThreadInfo(
@@ -103,6 +126,43 @@ def fetch_thread(tid: int, page: int | str, cookie: str) -> NgaResponse:
         thread_info=thread_info,
         users=users,
         replies=replies,
+        total_pages=total_pages,
+        current_page=current_page,
+    )
+
+
+def fetch_author_threads_page(
+    authorid: int, page: int, cookie: str
+) -> NgaAuthorThreadsPage:
+    url = f"{NGA_BASE_URL}/thread.php"
+    params = {"authorid": authorid, "page": page, "lite": "js"}
+    resp = httpx.get(url, params=params, headers=_headers(cookie), timeout=30)
+    resp.raise_for_status()
+
+    data = _decode_nga_json(resp.content)
+    users = data.get("__U", {})
+    threads = []
+    for tid_str, t in data.get("__T", {}).items():
+        if not str(tid_str).isdigit():
+            continue
+        tid = int(t.get("tid", tid_str))
+        thread_authorid = int(t.get("authorid", authorid))
+        user = users.get(str(thread_authorid), {})
+        author = t.get("author") or user.get("username") or str(thread_authorid)
+        threads.append(
+            NgaAuthorThread(
+                tid=tid,
+                subject=t.get("subject", ""),
+                authorid=thread_authorid,
+                author=author,
+                replies=int(t.get("replies", 0)),
+            )
+        )
+    total_rows = int(data.get("__ROWS", len(threads)))
+    total_pages = (total_rows + 34) // 35 if total_rows else 1
+    current_page = int(data.get("__PAGE", page))
+    return NgaAuthorThreadsPage(
+        threads=threads,
         total_pages=total_pages,
         current_page=current_page,
     )

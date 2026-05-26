@@ -29,10 +29,11 @@ class TestFormatMessage:
 
         replies = [Reply("hello world", "2025-12-31 15:41", 5)]
         msg = format_message("测试帖子", "测试用户", replies)
-        assert msg["msg_type"] == "text"
-        text = msg["content"]["text"]
-        assert "测试帖子" in text
-        assert "测试用户" in text
+        assert msg["msg_type"] == "interactive"
+        assert (
+            msg["card"]["header"]["title"]["content"] == "【测试帖子】测试用户 新发言"
+        )
+        text = msg["card"]["elements"][0]["content"]
         assert "2025-12-31 15:41" in text
         assert "5楼" in text
         assert "hello world" in text
@@ -49,7 +50,7 @@ class TestFormatMessage:
             Reply("second", "2025-12-31 15:42", 10),
         ]
         msg = format_message("帖子", "用户", replies)
-        text = msg["content"]["text"]
+        text = msg["card"]["elements"][0]["content"]
         assert "5楼" in text
         assert "10楼" in text
         assert "first" in text
