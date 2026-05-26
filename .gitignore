@@ -146,3 +146,6 @@ logs/
 
 # data
 data/
+
+# local git worktrees
+.worktrees/
