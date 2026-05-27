@@ -41,12 +41,16 @@ class TestPageForLou:
 class TestFetchThread:
     def test_parses_response(self):
         mock_resp = MagicMock()
+        mock_resp.status_code = 200
         mock_resp.content = (
             "window.script_muti_get_var_store=" + MOCK_NGA_JSON
         ).encode("gbk")
         mock_resp.raise_for_status = MagicMock()
 
-        with patch("src.nga.httpx.get", return_value=mock_resp):
+        with (
+            patch("src.nga.time.sleep"),
+            patch("src.nga.httpx.get", return_value=mock_resp),
+        ):
             result = fetch_thread(45905087, 1, "test_cookie")
 
         assert isinstance(result, NgaResponse)
@@ -79,12 +83,16 @@ class TestFetchThread:
             '"__ROWS":1,"__PAGE":1}}'
         )
         mock_resp = MagicMock()
+        mock_resp.status_code = 200
         mock_resp.content = (
             "window.script_muti_get_var_store=" + reversed_json
         ).encode("gbk")
         mock_resp.raise_for_status = MagicMock()
 
-        with patch("src.nga.httpx.get", return_value=mock_resp):
+        with (
+            patch("src.nga.time.sleep"),
+            patch("src.nga.httpx.get", return_value=mock_resp),
+        ):
             result = fetch_thread(1, 1, "cookie")
 
         assert result.replies[0].lou == 0
@@ -93,10 +101,13 @@ class TestFetchThread:
     def test_http_error_raises(self):
         import httpx
 
-        with patch(
-            "src.nga.httpx.get",
-            side_effect=httpx.HTTPStatusError(
-                "error", request=MagicMock(), response=MagicMock(status_code=403)
+        with (
+            patch("src.nga.time.sleep"),
+            patch(
+                "src.nga.httpx.get",
+                side_effect=httpx.HTTPStatusError(
+                    "error", request=MagicMock(), response=MagicMock(status_code=403)
+                ),
             ),
         ):
             with pytest.raises(httpx.HTTPStatusError):
@@ -112,12 +123,16 @@ class TestFetchAuthorThreadsPage:
             '"author":"测试用户","replies":0}},"__ROWS":40,"__PAGE":1}}'
         )
         mock_resp = MagicMock()
+        mock_resp.status_code = 200
         mock_resp.content = ("window.script_muti_get_var_store=" + mock_json).encode(
             "gbk"
         )
         mock_resp.raise_for_status = MagicMock()
 
-        with patch("src.nga.httpx.get", return_value=mock_resp) as mock_get:
+        with (
+            patch("src.nga.time.sleep"),
+            patch("src.nga.httpx.get", return_value=mock_resp) as mock_get,
+        ):
             result = fetch_author_threads_page(21321600, 1, "cookie")
 
         assert result.current_page == 1

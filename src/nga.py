@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import random
 import re
+import time
 from dataclasses import dataclass
 
 import httpx
 
 NGA_BASE_URL = "https://bbs.nga.cn"
+MAX_RETRIES = 5
+RETRY_BACKOFF = 5  # base seconds, exponential
+REQUEST_INTERVAL = 3.0  # seconds between requests
 
 
 @dataclass
@@ -72,6 +77,28 @@ def _headers(cookie: str) -> dict[str, str]:
     }
 
 
+def _request_with_retry(
+    url: str, params: dict, cookie: str, timeout: int = 30
+) -> httpx.Response:
+    time.sleep(REQUEST_INTERVAL)
+    last_exc: Exception | None = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        resp = httpx.get(url, params=params, headers=_headers(cookie), timeout=timeout)
+        if resp.status_code < 500:
+            resp.raise_for_status()
+            return resp
+        last_exc = httpx.HTTPStatusError(
+            f"Server error '{resp.status_code} "
+            f"{resp.reason_phrase}' for url '{resp.url}'",
+            request=resp.request,
+            response=resp,
+        )
+        if attempt < MAX_RETRIES:
+            wait = RETRY_BACKOFF * (2 ** (attempt - 1)) + random.uniform(0, 2)
+            time.sleep(wait)
+    raise last_exc  # type: ignore[misc]
+
+
 def _decode_nga_json(content: bytes) -> dict:
     raw = content.decode("gbk", errors="replace")
     json_str = raw.replace("window.script_muti_get_var_store=", "")
@@ -82,8 +109,7 @@ def _decode_nga_json(content: bytes) -> dict:
 def fetch_thread(tid: int, page: int | str, cookie: str) -> NgaResponse:
     url = f"{NGA_BASE_URL}/read.php"
     params = {"tid": tid, "page": page, "lite": "js"}
-    resp = httpx.get(url, params=params, headers=_headers(cookie), timeout=30)
-    resp.raise_for_status()
+    resp = _request_with_retry(url, params, cookie)
 
     data = _decode_nga_json(resp.content)
 
@@ -136,8 +162,7 @@ def fetch_author_threads_page(
 ) -> NgaAuthorThreadsPage:
     url = f"{NGA_BASE_URL}/thread.php"
     params = {"authorid": authorid, "page": page, "lite": "js"}
-    resp = httpx.get(url, params=params, headers=_headers(cookie), timeout=30)
-    resp.raise_for_status()
+    resp = _request_with_retry(url, params, cookie)
 
     data = _decode_nga_json(resp.content)
     users = data.get("__U", {})
