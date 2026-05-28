@@ -137,9 +137,9 @@ def fetch_thread(tid: int, page: int | str, cookie: str) -> NgaResponse:
                 pid=r["pid"],
                 authorid=r["authorid"],
                 postdate=r["postdate"],
-                postdatetimestamp=r["postdatetimestamp"],
+                postdatetimestamp=r.get("postdatetimestamp", 0),
                 lou=r["lou"],
-                content=r["content"],
+                content=r.get("content", ""),
             )
         )
     replies.sort(key=lambda x: x.lou)
