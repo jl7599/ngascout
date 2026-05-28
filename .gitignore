@@ -149,3 +149,5 @@ data/
 
 # local git worktrees
 .worktrees/
+
+.claude/
