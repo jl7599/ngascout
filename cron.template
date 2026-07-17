@@ -1,3 +1,5 @@
+PATH=/usr/local/bin:/usr/bin:/bin
+
 # Monitor: check for new posts and send notifications (enabled by default)
 */{CRON_INTERVAL} * * * * cd /app && uv run python -m src.jobs.monitor >> /proc/1/fd/1 2>> /proc/1/fd/2
 
