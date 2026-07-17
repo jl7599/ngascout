@@ -176,7 +176,7 @@ def test_archive_thread_incremental_no_new(tmp_path):
         )
 
     assert result.new_posts == 0
-    assert result.pages_fetched == 1
+    assert result.pages_fetched == 0
 
 
 def test_archive_thread_incremental_with_new(tmp_path):

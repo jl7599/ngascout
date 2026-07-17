@@ -17,6 +17,10 @@ def process_thread(config: Config, item: WatchItem) -> None:
         logger.error("Failed to fetch tid=%d: %s", item.tid, e)
         return
 
+    if latest_resp.thread_info is None:
+        logger.error("No thread info returned for tid=%d", item.tid)
+        return
+
     uids = item.uids or [latest_resp.thread_info.authorid]
 
     # Load stored data for each user and determine page range

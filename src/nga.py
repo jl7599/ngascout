@@ -40,7 +40,7 @@ class NgaThreadInfo:
 
 @dataclass
 class NgaResponse:
-    thread_info: NgaThreadInfo
+    thread_info: NgaThreadInfo | None
     users: dict[int, NgaUser]
     replies: list[NgaReply]
     total_pages: int
@@ -113,13 +113,15 @@ def fetch_thread(tid: int, page: int | str, cookie: str) -> NgaResponse:
 
     data = _decode_nga_json(resp.content)
 
-    t = data["__T"]
-    thread_info = NgaThreadInfo(
-        tid=t["tid"],
-        subject=t["subject"],
-        authorid=t["authorid"],
-        replies=t["replies"],
-    )
+    t = data.get("__T")
+    thread_info = None
+    if t is not None:
+        thread_info = NgaThreadInfo(
+            tid=t["tid"],
+            subject=t["subject"],
+            authorid=t["authorid"],
+            replies=t["replies"],
+        )
 
     users = {}
     for uid_str, u in data.get("__U", {}).items():

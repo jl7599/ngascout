@@ -67,6 +67,8 @@ def _fetch_author_posts(
     options: ArchiveAuthorOptions,
 ) -> AuthorArchive:
     first = fetch_thread(thread.tid, 1, options.cookie)
+    if first.thread_info is None:
+        raise ValueError(f"No thread info returned for tid={thread.tid}")
     replies = list(first.replies)
     for page in range(2, first.total_pages + 1):
         replies.extend(fetch_thread(thread.tid, page, options.cookie).replies)

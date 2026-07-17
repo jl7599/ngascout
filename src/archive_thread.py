@@ -124,6 +124,8 @@ def archive_thread(options: ArchiveThreadOptions) -> ArchiveThreadResult:
 
     if meta is None:
         first = fetch_thread(options.tid, 1, options.cookie)
+        if first.thread_info is None:
+            raise ValueError(f"No thread info returned for tid={options.tid}")
         total_pages = first.total_pages
         start_page = 1
         last_lou = -1
@@ -134,7 +136,9 @@ def archive_thread(options: ArchiveThreadOptions) -> ArchiveThreadResult:
         initial_users = first.users
     else:
         latest = fetch_thread(options.tid, "e", options.cookie)
-        pages_fetched = 1
+        if latest.thread_info is None:
+            raise ValueError(f"No thread info returned for tid={options.tid}")
+        pages_fetched = 0
         if latest.thread_info.replies <= meta["total_replies"]:
             logger.info("No new posts for tid=%d", options.tid)
             return ArchiveThreadResult(new_posts=0, pages_fetched=pages_fetched)
@@ -143,8 +147,6 @@ def archive_thread(options: ArchiveThreadOptions) -> ArchiveThreadResult:
         last_lou = meta["last_lou"]
         total_replies = latest.thread_info.replies
         subject = meta.get("subject", "")
-        initial_replies = latest.replies
-        initial_users = latest.users
 
     total_new = 0
 
@@ -195,9 +197,8 @@ def archive_thread(options: ArchiveThreadOptions) -> ArchiveThreadResult:
             },
         )
 
-    process_batch(initial_replies, initial_users)
-
     if meta is None:
+        process_batch(initial_replies, initial_users)
         page_range = range(2, total_pages + 1)
     else:
         page_range = range(start_page, total_pages + 1)
