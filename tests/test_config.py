@@ -1,11 +1,11 @@
 import pytest
 
-from src.config import WatchItem, load_config, parse_watch_list
+from src.core.config import WatchItem, load_config, parse_watch_list
 
 
 @pytest.fixture(autouse=True)
 def no_dotenv(monkeypatch):
-    monkeypatch.setattr("src.config.load_dotenv", lambda: None)
+    monkeypatch.setattr("src.core.config.load_dotenv", lambda: None)
 
 
 class TestParseWatchList:

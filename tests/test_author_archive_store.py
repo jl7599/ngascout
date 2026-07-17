@@ -1,6 +1,6 @@
 import json
 
-from src.author_archive_store import (
+from src.core.author_archive_store import (
     ArchivedPost,
     AuthorArchive,
     merge_and_save_archive,

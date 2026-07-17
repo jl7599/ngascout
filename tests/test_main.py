@@ -1,9 +1,9 @@
 from unittest.mock import patch
 
-from src.config import Config, WatchItem
-from src.main import process_thread
-from src.nga import NgaReply, NgaResponse, NgaThreadInfo, NgaUser
-from src.store import PostRecord, StoreData
+from src.core.config import Config, WatchItem
+from src.core.nga import NgaReply, NgaResponse, NgaThreadInfo, NgaUser
+from src.core.store import PostRecord, StoreData
+from src.jobs.monitor import process_thread
 
 
 def _make_config(**overrides):
@@ -45,17 +45,17 @@ def _make_response(replies=None, current_page=5, total_pages=5):
 
 class TestProcessThread:
     def test_first_time_sends_all(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("src.store.DATA_DIR", tmp_path)
+        monkeypatch.setattr("src.core.store.DATA_DIR", tmp_path)
         config = _make_config()
         item = WatchItem(tid=45905087, uids=[557398])
 
         with (
-            patch("src.main.fetch_thread", return_value=_make_response()),
-            patch("src.main.send_webhook", return_value=True),
+            patch("src.jobs.monitor.fetch_thread", return_value=_make_response()),
+            patch("src.jobs.monitor.send_webhook", return_value=True),
         ):
             process_thread(config, item)
 
-        from src.store import load
+        from src.core.store import load
 
         stored = load(45905087, 557398)
         assert stored is not None
@@ -63,11 +63,11 @@ class TestProcessThread:
         assert stored.last_page == 50
 
     def test_skips_already_seen(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("src.store.DATA_DIR", tmp_path)
+        monkeypatch.setattr("src.core.store.DATA_DIR", tmp_path)
         config = _make_config()
         item = WatchItem(tid=45905087, uids=[557398])
 
-        from src.store import save
+        from src.core.store import save
 
         save(
             45905087,
@@ -84,58 +84,61 @@ class TestProcessThread:
         )
 
         with (
-            patch("src.main.fetch_thread", return_value=_make_response()),
-            patch("src.main.send_webhook") as mock_send,
+            patch("src.jobs.monitor.fetch_thread", return_value=_make_response()),
+            patch("src.jobs.monitor.send_webhook") as mock_send,
         ):
             process_thread(config, item)
             mock_send.assert_not_called()
 
     def test_default_op_when_no_uids(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("src.store.DATA_DIR", tmp_path)
+        monkeypatch.setattr("src.core.store.DATA_DIR", tmp_path)
         config = _make_config(watch_list=[WatchItem(tid=45905087, uids=[])])
         item = WatchItem(tid=45905087, uids=[])
 
         with (
-            patch("src.main.fetch_thread", return_value=_make_response()),
-            patch("src.main.send_webhook", return_value=True),
+            patch("src.jobs.monitor.fetch_thread", return_value=_make_response()),
+            patch("src.jobs.monitor.send_webhook", return_value=True),
         ):
             process_thread(config, item)
 
-        from src.store import load
+        from src.core.store import load
 
         stored = load(45905087, 557398)
         assert stored is not None
 
     def test_fetch_failure_skips_thread(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("src.store.DATA_DIR", tmp_path)
+        monkeypatch.setattr("src.core.store.DATA_DIR", tmp_path)
         config = _make_config()
         item = WatchItem(tid=45905087, uids=[557398])
 
-        with patch("src.main.fetch_thread", side_effect=Exception("network error")):
+        with patch(
+            "src.jobs.monitor.fetch_thread",
+            side_effect=Exception("network error"),
+        ):
             process_thread(config, item)
 
     def test_send_failure_does_not_save(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("src.store.DATA_DIR", tmp_path)
+        monkeypatch.setattr("src.core.store.DATA_DIR", tmp_path)
         config = _make_config()
         item = WatchItem(tid=45905087, uids=[557398])
 
         with (
-            patch("src.main.fetch_thread", return_value=_make_response()),
-            patch("src.main.send_webhook", return_value=False),
+            patch("src.jobs.monitor.fetch_thread", return_value=_make_response()),
+            patch("src.jobs.monitor.send_webhook", return_value=False),
         ):
             process_thread(config, item)
 
-        from src.store import load
+        from src.core.store import load
 
         stored = load(45905087, 557398)
         assert stored is None
 
     def test_fetches_intermediate_pages(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("src.store.DATA_DIR", tmp_path)
+        monkeypatch.setattr("src.core.store.DATA_DIR", tmp_path)
         config = _make_config()
         item = WatchItem(tid=45905087, uids=[557398])
 
-        from src.store import save
+        from src.core.store import save
 
         save(
             45905087,
@@ -178,12 +181,12 @@ class TestProcessThread:
             return latest_response
 
         with (
-            patch("src.main.fetch_thread", side_effect=mock_fetch),
-            patch("src.main.send_webhook", return_value=True),
+            patch("src.jobs.monitor.fetch_thread", side_effect=mock_fetch),
+            patch("src.jobs.monitor.send_webhook", return_value=True),
         ):
             process_thread(config, item)
 
-        from src.store import load
+        from src.core.store import load
 
         stored = load(45905087, 557398)
         assert stored is not None

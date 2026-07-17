@@ -19,7 +19,7 @@ class StoreData:
     posts: dict[str, PostRecord] = field(default_factory=dict)
 
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 
 
 def _path(tid: int, uid: int) -> Path:
@@ -53,9 +53,3 @@ def save(tid: int, uid: int, data: StoreData) -> None:
         },
     }
     p.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-def filter_new(stored: StoreData | None, replies: list) -> list:
-    if stored is None:
-        return list(replies)
-    return [r for r in replies if str(r.pid) not in stored.posts]

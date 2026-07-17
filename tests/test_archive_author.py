@@ -1,7 +1,6 @@
 from unittest.mock import patch
 
-from src.archive_author import ArchiveAuthorOptions, archive_author
-from src.nga import (
+from src.core.nga import (
     NgaAuthorThread,
     NgaAuthorThreadsPage,
     NgaReply,
@@ -9,6 +8,7 @@ from src.nga import (
     NgaThreadInfo,
     NgaUser,
 )
+from src.jobs.archive_author import ArchiveAuthorOptions, archive_author
 
 
 def _thread_page(tid, subject, page, total_pages, replies):
@@ -82,9 +82,15 @@ def test_archive_author_fetches_all_author_threads_and_thread_pages(tmp_path):
     )
 
     with (
-        patch("src.archive_author.fetch_author_threads_page", return_value=thread_list),
-        patch("src.archive_author.fetch_thread", side_effect=[page1, page2]) as fetch,
-        patch("src.archive_author.send_webhook") as send,
+        patch(
+            "src.jobs.archive_author.fetch_author_threads_page",
+            return_value=thread_list,
+        ),
+        patch(
+            "src.jobs.archive_author.fetch_thread",
+            side_effect=[page1, page2],
+        ) as fetch,
+        patch("src.jobs.archive_author.send_webhook") as send,
     ):
         result = archive_author(
             ArchiveAuthorOptions(
@@ -132,9 +138,12 @@ def test_archive_author_notifies_only_when_enabled(tmp_path):
     )
 
     with (
-        patch("src.archive_author.fetch_author_threads_page", return_value=thread_list),
-        patch("src.archive_author.fetch_thread", return_value=page1),
-        patch("src.archive_author.send_webhook", return_value=True) as send,
+        patch(
+            "src.jobs.archive_author.fetch_author_threads_page",
+            return_value=thread_list,
+        ),
+        patch("src.jobs.archive_author.fetch_thread", return_value=page1),
+        patch("src.jobs.archive_author.send_webhook", return_value=True) as send,
     ):
         archive_author(
             ArchiveAuthorOptions(

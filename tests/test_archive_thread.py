@@ -1,12 +1,12 @@
 from unittest.mock import patch
 
-from src.archive_thread import (
+from src.core.nga import NgaReply, NgaResponse, NgaThreadInfo, NgaUser
+from src.jobs.archive_thread import (
     ArchiveThreadOptions,
     extract_quote_lou,
     format_post_line,
     parse_tid_input,
 )
-from src.nga import NgaReply, NgaResponse, NgaThreadInfo, NgaUser
 
 
 def _reply(lou, authorid=100, pid=None, content="hello"):
@@ -121,8 +121,8 @@ def test_format_post_line_escapes_backslash():
 def test_archive_thread_first_run(tmp_path):
     page1 = _response(1001, [_reply(0), _reply(1)], total_pages=1)
 
-    with patch("src.archive_thread.fetch_thread", return_value=page1):
-        from src.archive_thread import archive_thread
+    with patch("src.jobs.archive_thread.fetch_thread", return_value=page1):
+        from src.jobs.archive_thread import archive_thread
 
         result = archive_thread(
             ArchiveThreadOptions(tid=1001, cookie="c", output_dir=tmp_path),
@@ -153,7 +153,7 @@ def test_archive_thread_incremental_no_new(tmp_path):
     archive_dir = tmp_path / "1001"
     archive_dir.mkdir(parents=True)
 
-    from src.archive_thread import save_meta
+    from src.jobs.archive_thread import save_meta
 
     save_meta(
         archive_dir,
@@ -168,8 +168,8 @@ def test_archive_thread_incremental_no_new(tmp_path):
 
     latest = _response(1001, [_reply(5)], total_replies=10)
 
-    with patch("src.archive_thread.fetch_thread", return_value=latest):
-        from src.archive_thread import archive_thread
+    with patch("src.jobs.archive_thread.fetch_thread", return_value=latest):
+        from src.jobs.archive_thread import archive_thread
 
         result = archive_thread(
             ArchiveThreadOptions(tid=1001, cookie="c", output_dir=tmp_path),
@@ -183,7 +183,7 @@ def test_archive_thread_incremental_with_new(tmp_path):
     archive_dir = tmp_path / "1001"
     archive_dir.mkdir(parents=True)
 
-    from src.archive_thread import save_meta, save_pid_map
+    from src.jobs.archive_thread import save_meta, save_pid_map
 
     save_meta(
         archive_dir,
@@ -200,8 +200,8 @@ def test_archive_thread_incremental_with_new(tmp_path):
     latest = _response(1001, [_reply(1), _reply(2)], total_pages=1, total_replies=3)
     new_page = _response(1001, [_reply(1), _reply(2)], total_pages=1, total_replies=3)
 
-    with patch("src.archive_thread.fetch_thread", side_effect=[latest, new_page]):
-        from src.archive_thread import archive_thread
+    with patch("src.jobs.archive_thread.fetch_thread", side_effect=[latest, new_page]):
+        from src.jobs.archive_thread import archive_thread
 
         result = archive_thread(
             ArchiveThreadOptions(tid=1001, cookie="c", output_dir=tmp_path),
@@ -230,8 +230,8 @@ def test_archive_thread_multi_page(tmp_path):
         total_replies=3,
     )
 
-    with patch("src.archive_thread.fetch_thread", side_effect=[page1, page2]):
-        from src.archive_thread import archive_thread
+    with patch("src.jobs.archive_thread.fetch_thread", side_effect=[page1, page2]):
+        from src.jobs.archive_thread import archive_thread
 
         result = archive_thread(
             ArchiveThreadOptions(tid=1001, cookie="c", output_dir=tmp_path),

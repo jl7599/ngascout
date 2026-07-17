@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.nga import (
+from src.core.nga import (
     NgaAuthorThread,
     NgaReply,
     NgaResponse,
@@ -48,8 +48,8 @@ class TestFetchThread:
         mock_resp.raise_for_status = MagicMock()
 
         with (
-            patch("src.nga.time.sleep"),
-            patch("src.nga.httpx.get", return_value=mock_resp),
+            patch("src.core.nga.time.sleep"),
+            patch("src.core.nga.httpx.get", return_value=mock_resp),
         ):
             result = fetch_thread(45905087, 1, "test_cookie")
 
@@ -90,8 +90,8 @@ class TestFetchThread:
         mock_resp.raise_for_status = MagicMock()
 
         with (
-            patch("src.nga.time.sleep"),
-            patch("src.nga.httpx.get", return_value=mock_resp),
+            patch("src.core.nga.time.sleep"),
+            patch("src.core.nga.httpx.get", return_value=mock_resp),
         ):
             result = fetch_thread(1, 1, "cookie")
 
@@ -102,9 +102,9 @@ class TestFetchThread:
         import httpx
 
         with (
-            patch("src.nga.time.sleep"),
+            patch("src.core.nga.time.sleep"),
             patch(
-                "src.nga.httpx.get",
+                "src.core.nga.httpx.get",
                 side_effect=httpx.HTTPStatusError(
                     "error", request=MagicMock(), response=MagicMock(status_code=403)
                 ),
@@ -130,8 +130,8 @@ class TestFetchAuthorThreadsPage:
         mock_resp.raise_for_status = MagicMock()
 
         with (
-            patch("src.nga.time.sleep"),
-            patch("src.nga.httpx.get", return_value=mock_resp) as mock_get,
+            patch("src.core.nga.time.sleep"),
+            patch("src.core.nga.httpx.get", return_value=mock_resp) as mock_get,
         ):
             result = fetch_author_threads_page(21321600, 1, "cookie")
 

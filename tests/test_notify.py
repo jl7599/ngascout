@@ -2,7 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 
-from src.notify import format_message, send_webhook, strip_html
+from src.core.notify import format_message, send_webhook, strip_html
 
 
 class TestStripHtml:
@@ -62,7 +62,7 @@ class TestSendWebhook:
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
         mock_resp.json.return_value = {"code": 0}
-        with patch("src.notify.httpx.post", return_value=mock_resp):
+        with patch("src.core.notify.httpx.post", return_value=mock_resp):
             assert (
                 send_webhook("https://example.com/hook", {"msg_type": "text"}) is True
             )
@@ -71,14 +71,14 @@ class TestSendWebhook:
         mock_resp = MagicMock()
         mock_resp.raise_for_status = MagicMock()
         mock_resp.json.return_value = {"code": 19021, "msg": "rate limited"}
-        with patch("src.notify.httpx.post", return_value=mock_resp):
+        with patch("src.core.notify.httpx.post", return_value=mock_resp):
             assert (
                 send_webhook("https://example.com/hook", {"msg_type": "text"}) is False
             )
 
     def test_failure_returns_false(self):
         with patch(
-            "src.notify.httpx.post",
+            "src.core.notify.httpx.post",
             side_effect=httpx.HTTPStatusError(
                 "err", request=MagicMock(), response=MagicMock(status_code=500)
             ),

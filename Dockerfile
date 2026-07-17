@@ -10,6 +10,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 COPY src/ src/
+COPY cron.template /app/cron.template
 COPY scripts/entrypoint.sh /app/scripts/entrypoint.sh
 
 RUN mkdir -p data

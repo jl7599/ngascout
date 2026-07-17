@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 
-from src.config import Config, WatchItem
-from src.nga import NgaReply, fetch_thread, page_for_lou
-from src.notify import format_message, send_webhook
-from src.store import PostRecord, StoreData, load, save
+from src.core.config import Config, WatchItem, load_config
+from src.core.nga import NgaReply, fetch_thread, page_for_lou
+from src.core.notify import format_message, send_webhook
+from src.core.store import PostRecord, StoreData, load, save
 
 logger = logging.getLogger(__name__)
 
@@ -109,8 +109,6 @@ def process_thread(config: Config, item: WatchItem) -> None:
 
 
 def main() -> None:
-    from src.config import load_config
-
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
     )

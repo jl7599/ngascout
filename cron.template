@@ -1,0 +1,10 @@
+# Monitor: check for new posts and send notifications (enabled by default)
+*/{CRON_INTERVAL} * * * * cd /app && uv run python -m src.jobs.monitor >> /proc/1/fd/1 2>> /proc/1/fd/2
+
+# Archive thread: save all posts in a thread
+# Uncomment the line below to enable, configure ARCHIVE_THREAD_TID in .env
+# 0 */6 * * * cd /app && uv run python -m src.jobs.archive_thread >> /proc/1/fd/1 2>> /proc/1/fd/2
+
+# Archive author: save all posts by an author
+# Uncomment the line below to enable, configure ARCHIVE_AUTHOR_ID in .env
+# 0 */6 * * * cd /app && uv run python -m src.jobs.archive_author >> /proc/1/fd/1 2>> /proc/1/fd/2

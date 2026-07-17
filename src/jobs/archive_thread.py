@@ -11,12 +11,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from src.nga import NgaReply, fetch_thread, page_for_lou
-from src.notify import strip_html
+from src.core.nga import NgaReply, fetch_thread, page_for_lou
+from src.core.notify import strip_html
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent.parent / "data" / "archive"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "archive"
 CHECKPOINT_PAGES = 5
 
 
@@ -229,7 +229,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Archive all posts in an NGA thread.",
     )
-    parser.add_argument("tid_input", help="Thread URL or tid number")
+    parser.add_argument("tid_input", nargs="?", help="Thread URL or tid number")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     return parser.parse_args()
 
@@ -241,7 +241,12 @@ def main() -> None:
     )
     load_dotenv()
     args = parse_args()
-    tid = parse_tid_input(args.tid_input)
+    tid_input = args.tid_input or os.getenv("ARCHIVE_THREAD_TID", "")
+    if not tid_input:
+        raise ValueError(
+            "tid is required: provide as CLI argument or set ARCHIVE_THREAD_TID"
+        )
+    tid = parse_tid_input(tid_input)
     cookie = os.getenv("NGA_COOKIE", "")
     if not cookie:
         raise ValueError("NGA_COOKIE is required")

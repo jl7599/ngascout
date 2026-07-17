@@ -8,24 +8,24 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from src.author_archive_store import (
+from src.core.author_archive_store import (
     ArchivedPost,
     AuthorArchive,
     merge_and_save_archive,
 )
-from src.nga import (
+from src.core.nga import (
     NGA_BASE_URL,
     NgaAuthorThread,
     NgaReply,
     fetch_author_threads_page,
     fetch_thread,
 )
-from src.notify import format_message, send_webhook, strip_html
+from src.core.notify import format_message, send_webhook, strip_html
 
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent.parent / "data" / "authors"
+DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "authors"
 
 
 @dataclass
@@ -149,7 +149,7 @@ def archive_author(options: ArchiveAuthorOptions) -> ArchiveAuthorResult:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Archive all NGA posts by author.")
-    parser.add_argument("--authorid", type=int, required=True)
+    parser.add_argument("--authorid", type=int, default=None)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--notify", action="store_true")
     parser.add_argument("--limit-threads", type=int, default=None)
@@ -163,26 +163,36 @@ def main() -> None:
     )
     load_dotenv()
     args = parse_args()
+    authorid = args.authorid or int(os.getenv("ARCHIVE_AUTHOR_ID", "0"))
+    if not authorid:
+        raise ValueError(
+            "authorid is required: provide as --authorid or set ARCHIVE_AUTHOR_ID"
+        )
     cookie = os.getenv("NGA_COOKIE", "")
     if not cookie:
         raise ValueError("NGA_COOKIE is required")
     feishu_webhook_url = os.getenv("FEISHU_WEBHOOK_URL", "")
-    if args.notify and not feishu_webhook_url:
-        raise ValueError("FEISHU_WEBHOOK_URL is required when --notify is enabled")
+    notify = args.notify or os.getenv("ARCHIVE_AUTHOR_NOTIFY", "false").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+    if notify and not feishu_webhook_url:
+        raise ValueError("FEISHU_WEBHOOK_URL is required when notify is enabled")
 
     result = archive_author(
         ArchiveAuthorOptions(
-            authorid=args.authorid,
+            authorid=authorid,
             cookie=cookie,
             output_dir=args.output_dir,
-            notify=args.notify,
+            notify=notify,
             feishu_webhook_url=feishu_webhook_url,
             limit_threads=args.limit_threads,
         )
     )
     logger.info(
         "Archived authorid=%d threads=%d posts=%d changed=%d",
-        args.authorid,
+        authorid,
         result.threads,
         result.posts,
         result.changed_posts,
